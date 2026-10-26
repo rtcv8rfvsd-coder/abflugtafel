@@ -79,6 +79,9 @@ body {
   var TICK_MS = 45;           // Tempo der Fallblätter
   var LIST_SECONDS = 60;      // Nach so vielen Sekunden zurück zur Großansicht
   var HERO_W = 18;            // Breite der Großansicht in Zeichen
+  // Defekter Streifen am Bildschirmrand: ?rand=unten (Standard), ?rand=oben oder ?rand=aus
+  var RAND = (location.search.match(/rand=(oben|unten|aus)/) || [0, 'unten'])[1];
+  var STREIFEN = RAND === 'aus' ? 0 : 0.22; // Anteil der Bildschirmhöhe, der frei bleibt
 
   var CHARS = ' ABCDEFGHIJKLMNOPQRSTUVWXYZÄÖÜ0123456789:.-/';
   var DAYS = ['SO', 'MO', 'DI', 'MI', 'DO', 'FR', 'SA'];
@@ -221,10 +224,13 @@ body {
 
   function place(el, wEm, hEm) {
     var W = window.innerWidth, H = window.innerHeight;
-    var size = Math.min(W * 0.95 / wEm, H * 0.88 / hEm);
+    var top0 = RAND === 'oben' ? H * STREIFEN : 0;
+    var usable = H * (1 - STREIFEN);
+    var size = Math.min(W * 0.95 / wEm, usable * 0.9 / hEm);
     el.style.fontSize = size + 'px';
     el.style.left = Math.round((W - wEm * size) / 2) + 'px';
-    el.style.top = Math.round((H - hEm * size) / 2.4) + 'px';
+    el.style.top = Math.round(top0 + (usable - hEm * size) / 2) + 'px';
+    foot.style.bottom = Math.round((RAND === 'unten' ? H * STREIFEN : 0) + 8) + 'px';
   }
 
   function fit() {
@@ -235,11 +241,7 @@ body {
   function fitList() {
     var wEm = totalCells * CELL_EM + (COLS.length - 1) * GAP_EM;
     var hEm = 1.25 + 0.55 + 0.38 * 1.3 + 0.25 + ROWS * (1.25 + 0.32);
-    var W = window.innerWidth, H = window.innerHeight;
-    var size = Math.min(W * 0.95 / wEm, H * 0.9 / hEm);
-    board.style.fontSize = size + 'px';
-    board.style.left = Math.round((W - wEm * size) / 2) + 'px';
-    board.style.top = Math.round((H - hEm * size) / 2.4) + 'px';
+    place(board, wEm, hEm);
     var clockParent = clockCells[0].span.parentNode.parentNode;
     clockParent.parentNode.style.width = (wEm + 0.1) + 'em';
   }
