@@ -10,7 +10,8 @@
 <style>
 html, body { margin: 0; padding: 0; background: #0d0d0d; height: 100%; overflow: hidden; }
 body {
-  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-family: "HelveticaNeue-CondensedBold", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-stretch: condensed;
   font-weight: bold;
   color: #f2f2f2;
   -webkit-text-size-adjust: none;
@@ -32,10 +33,10 @@ body {
 .cell {
   display: inline-block;
   position: relative;
-  width: .78em;
+  width: .64em;
   height: 1.25em;
   line-height: 1.25em;
-  margin-right: .08em;
+  margin-right: .07em;
   text-align: center;
   vertical-align: top;
   overflow: hidden;
@@ -74,8 +75,9 @@ body {
   var API = 'https://api.pocket-rocket.io/v1/public/items/arrival_departure';
   var AUTH = 'Basic ' + btoa('scn:93ncsjzz1bhjA!'); // öffentlicher Zugang der Flughafen-Webseite
   var ROWS = 8;               // Anzahl Flugzeilen
-  var KEEP_MINUTES = 15;      // Gestartete/gelandete Flüge so lange noch zeigen
-  var REFRESH_MINUTES = 5;    // Daten neu laden
+  var KEEP_MINUTES = 15;      // Gestartete/gelandete Flüge so lange nach dem echten Start/Landen noch zeigen
+  var STALE_MINUTES = 180;    // Flüge ohne Meldung nach so langer Verspätung ausblenden
+  var REFRESH_MINUTES = 2;    // Daten neu laden
   var TICK_MS = 45;           // Tempo der Fallblätter
   var LIST_SECONDS = 60;      // Nach so vielen Sekunden zurück zur Großansicht
   var HERO_W = 15;            // Breite der Großansicht in Zeichen
@@ -93,7 +95,7 @@ body {
     { key: 'ort',   w: 14, label: 'ZIEL / HERKUNFT' },
     { key: 'info',  w: 15, label: 'BEMERKUNG' }
   ];
-  var CELL_EM = 0.86, GAP_EM = 0.5;
+  var CELL_EM = 0.71, GAP_EM = 0.45;
 
   var board = document.getElementById('board');
   var hero = document.getElementById('hero');
@@ -219,7 +221,7 @@ body {
     var W = window.innerWidth, H = window.innerHeight;
     var top0 = RAND === 'oben' ? H * STREIFEN : 0;
     var usable = H * (1 - STREIFEN);
-    var size = Math.min(W * 0.95 / wEm, usable * 0.9 / hEm);
+    var size = Math.min(W * 0.97 / wEm, usable * 0.94 / hEm);
     el.style.fontSize = size + 'px';
     el.style.left = Math.round((W - wEm * size) / 2) + 'px';
     el.style.top = Math.round(top0 + (usable - hEm * size) / 2) + 'px';
@@ -275,7 +277,9 @@ body {
         flug: (f.flugnr || '').replace(/\s+/g, ' '),
         dir: dir,
         ort: f.ort || '',
-        info: remark(f)
+        info: remark(f),
+        // Erst wenn der Flughafen "gestartet", "gelandet" o. ä. meldet, gilt der Flug als vorbei
+        done: /gelandet|gestartet|annul|gestrichen|cancel/i.test(f.erwartet || '')
       });
     }
     return out;
@@ -309,7 +313,8 @@ body {
     for (var i = 0; i < COLS.length; i++) labelEls[i].innerHTML = COLS[i].label;
     var now = Date.now() / 60000, list = [];
     for (var n = 0; n < flights.length; n++) {
-      if (flights[n].when >= now - KEEP_MINUTES) list.push(flights[n]);
+      var fl = flights[n];
+      if (fl.when >= now - (fl.done ? KEEP_MINUTES : STALE_MINUTES)) list.push(fl);
     }
     renderHero(list[0]);
     for (var r = 0; r < ROWS; r++) {
