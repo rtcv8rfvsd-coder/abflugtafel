@@ -78,7 +78,7 @@ body {
   var REFRESH_MINUTES = 5;    // Daten neu laden
   var TICK_MS = 45;           // Tempo der Fallblätter
   var LIST_SECONDS = 60;      // Nach so vielen Sekunden zurück zur Großansicht
-  var HERO_W = 18;            // Breite der Großansicht in Zeichen
+  var HERO_W = 15;            // Breite der Großansicht in Zeichen
   // Defekter Streifen am Bildschirmrand: ?rand=unten (Standard), ?rand=oben oder ?rand=aus
   var RAND = (location.search.match(/rand=(oben|unten|aus)/) || [0, 'unten'])[1];
   var STREIFEN = RAND === 'aus' ? 0 : 0.22; // Anteil der Bildschirmhöhe, der frei bleibt
@@ -91,13 +91,13 @@ body {
     { key: 'flug',  w: 6,  label: 'FLUG' },
     { key: 'dir',   w: 4,  label: '' },
     { key: 'ort',   w: 14, label: 'ZIEL / HERKUNFT' },
-    { key: 'info',  w: 14, label: 'BEMERKUNG' }
+    { key: 'info',  w: 15, label: 'BEMERKUNG' }
   ];
   var CELL_EM = 0.86, GAP_EM = 0.5;
 
   var board = document.getElementById('board');
   var hero = document.getElementById('hero');
-  var heroCells = {}, heroClock;
+  var heroCells = {};
   var showList = false, backTimer = null;
   var foot = document.getElementById('foot');
   var moving = [];
@@ -209,13 +209,6 @@ body {
   }
 
   function buildHero() {
-    var t = heroRow('title yellow', 12);
-    var clock = document.createElement('div');
-    clock.className = 'col right';
-    heroClock = makeCells(clock, 5);
-    t.row.insertBefore(clock, t.row.firstChild);
-    t.row.style.width = (HERO_W * CELL_EM) + 'em';
-    heroCells.title = t.cells;
     heroCells.line1 = heroRow('', HERO_W).cells;
     heroCells.dir = heroRow('yellow', HERO_W).cells;
     heroCells.ort = heroRow('', HERO_W).cells;
@@ -234,7 +227,7 @@ body {
   }
 
   function fit() {
-    place(hero, HERO_W * CELL_EM, 1.25 + 0.45 + 4 * (1.25 + 0.22));
+    place(hero, HERO_W * CELL_EM, 4 * (1.25 + 0.22));
     fitList();
   }
 
@@ -331,7 +324,6 @@ body {
   }
 
   function renderHero(f) {
-    setText(heroCells.title, 'ALS NÄCHSTES');
     if (!f) {
       setText(heroCells.line1, '');
       setText(heroCells.dir, '');
@@ -343,15 +335,21 @@ body {
     var spaces = HERO_W - left.length - f.flug.length;
     setText(heroCells.line1, left + new Array(Math.max(spaces, 1) + 1).join(' ') + f.flug);
     setText(heroCells.dir, f.dir === 'NACH' ? 'START NACH' : 'LANDUNG AUS');
-    setText(heroCells.ort, f.ort);
+    setText(heroCells.ort, shorten(f.ort, HERO_W));
     setText(heroCells.info, f.info);
+  }
+
+  // Zu lange Ortsnamen an einer Wortgrenze kürzen (PALMA DE MALLORCA -> PALMA DE)
+  function shorten(txt, n) {
+    if (txt.length <= n) return txt;
+    var cut = txt.lastIndexOf(' ', n);
+    return cut > 3 ? txt.substring(0, cut) : txt.substring(0, n);
   }
 
   function clock() {
     var d = new Date();
     var t = pad(d.getHours()) + ':' + pad(d.getMinutes());
     setText(clockCells, t);
-    setText(heroClock, t);
   }
 
   function toggleView() {
